@@ -26,6 +26,7 @@ NO
 ## Chosen approach:
 Owlbear rodeo is nothing special, it should be a general generic site, without hardcoded url's.
 
-* - loading the scipts on tab.navigation is not possible.
-* - loading the scripts on webNavigation is an intrusive method, with overhead to many unrelated sites, and needs a popup for extra permissions.
-* + registerContentScripts does not need special permissions and works for iframes and tabs.
+* registerContentScripts does not need special permissions and works for iframes and tabs.
+* Use the current ui for custom domains
+* Downside : slight change in the way generic scripts are loaded for old customm sites.
+
