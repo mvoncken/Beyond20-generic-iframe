@@ -1437,7 +1437,6 @@ function setCurrentTab(tab) {
 
 var current_tab = null;
 
-
 function createDiscordChannelsCombobox(name, description, title, dropdown_options) {
     const description_p = description.split("\n").map(desc => E.p({}, desc));
     let options = [];
@@ -1956,7 +1955,7 @@ function createCustomDomainsSetting(name, short) {
         )
     );
     const button = $(setting).find("button");
-    button.click(ev => {
+    button.click(async ev => {
         ev.stopPropagation();
         ev.preventDefault();
         const domains = getCustomDomainsSetting(name);
@@ -1966,7 +1965,7 @@ function createCustomDomainsSetting(name, short) {
                 alertify.error("Cannot request permissions. Please open the extension's options page and try again");
                 return;
             }
-            chromeOrBrowser.permissions.request({origins: [url]}).then((response) => {
+            await chromeOrBrowser.permissions.request({origins: [url]}).then((response) => {
                 if (response) {
                     console.log("Permission was granted");
                     alertify.success(`Beyond20 will now load automatically on ${url}`);
@@ -1978,6 +1977,9 @@ function createCustomDomainsSetting(name, short) {
                 console.error("Error requesting permission for ", url, err);
             });
         }
+
+        // awaiting all permissions requests before notifying background        
+        chrome.runtime.sendMessage({ "action": "custom-domains-updated", domains });
     });
 
     return setting;

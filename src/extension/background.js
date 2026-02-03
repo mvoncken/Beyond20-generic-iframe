@@ -270,6 +270,9 @@ function onMessage(request, sender, sendResponse) {
             // The previous listener, if there was one, would have been removed automatically at this point
             webNavigationReady = false;
         }
+    } else if (request.action == "custom-domains-updated") {
+        console.log("custom-domains-updated: ", request.domains);
+        initialiseCustomDomains(request.domains);
     } else if (request.action == "reload-me") {
         chrome.tabs.reload(sender.tab.id)
     } else if (request.action == "load-alertify") {
@@ -428,6 +431,56 @@ function listenToDiscordFrames() {
     webNavigationReady = true;
 }
 listenToDiscordFrames();
+
+function initialiseCustomDomains(domains) {
+    /* 
+    * Generic DOM api loaded via contentscripts because that allso works for iframes. 
+    * Security part is done in the UI when adding custom domains.
+    */
+    if (domains.length == 0) {return}
+    
+    const chromeOrBrowser = getBrowser() === "Firefox" ? browser : chrome;
+    if (manifest.manifest_version >= 3) {
+        // not tested, working on ff first
+        chromeOrBrowser.scripting.getRegisteredContentScripts().then( async (scripts) => {
+            if (scripts.find( script => script.id == "beyond20-generic-site")) {
+                console.log("Unregistering existing content script for custom domains");
+                await browser.scripting.unregisterContentScripts(["beyond20-generic-site"]);      
+            }
+            chromeOrBrowser.scripting.registerContentScripts([{
+                id: "beyond20-generic-site",
+                js: ["dist/generic_site.js"],
+                css: ["dist/beyond20.css"],
+                matches: domains,
+                allFrames: true,
+                persistAcrossSessions: true
+            }])
+            .then(() => {
+                console.log("Content script registered for custom domains:", domains);
+            })
+            .catch((err) => {
+                console.error("Content script Registration failed:", err.message);         
+            })
+        })
+    } else {
+        // Firefox Manifest v2 : contentScripts registration
+        // Does not persist, re-apply at startup
+        // scripting.registerContentScripts is available in v2 but it requires permissions we do not have.
+        browser.contentScripts.register({
+            js: [{file:"dist/generic_site.js"}],
+            css: [{file:"dist/beyond20.css"}],
+            matches: domains,
+            allFrames: true
+        })
+        .then(() => {
+            console.log("Content script registered for custom domains:", domains);
+        })
+        .catch((err) => {
+            console.error("Registration failed:", err.message);
+        });
+    }
+}
+initialiseCustomDomains(settings["custom-domains"])
 
 if (getBrowser() == "Chrome") {
     // Re-inject scripts when reloading the extension, on Chrome
